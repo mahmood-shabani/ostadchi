@@ -41,6 +41,15 @@ jobs:
         working-directory: .build_source/ostadchi_flutter
         run: |
           rm -f android/build.gradle android/app/build.gradle android/settings.gradle
+      - name: Configure Gradle memory for release build
+        working-directory: .build_source/ostadchi_flutter
+        run: |
+          if grep -q '^org.gradle.jvmargs=' android/gradle.properties; then
+            sed -i 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=1G -Dfile.encoding=UTF-8/' android/gradle.properties
+          else
+            echo 'org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=1G -Dfile.encoding=UTF-8' >> android/gradle.properties
+          fi
+          echo 'android.enableJetifier=false' >> android/gradle.properties
       - name: Get dependencies
         working-directory: .build_source/ostadchi_flutter
         run: flutter pub get
