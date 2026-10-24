@@ -1,0 +1,63 @@
+name: Build Ostadchi Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "ostadchi_flutter_v0.3_build_ready.zip"
+      - ".github/workflows/build-android.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Extract project archive
+        run: |
+          unzip -q ostadchi_flutter_v0.3_build_ready.zip -d .build_source
+          test -f .build_source/ostadchi_flutter/pubspec.yaml
+
+      - name: Restore Android project scaffolding if missing
+        working-directory: .build_source/ostadchi_flutter
+        run: |
+          if [ ! -f android/gradlew ] || [ ! -f android/gradle/wrapper/gradle-wrapper.properties ]; then
+            flutter create --platforms=android --org com.ostadchi --project-name ostadchi .
+          fi
+
+      - name: Get dependencies
+        working-directory: .build_source/ostadchi_flutter
+        run: flutter pub get
+
+      - name: Analyze Flutter code
+        working-directory: .build_source/ostadchi_flutter
+        run: flutter analyze
+
+      - name: Build release APK
+        working-directory: .build_source/ostadchi_flutter
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ostadchi-android-apk
+          path: .build_source/ostadchi_flutter/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
