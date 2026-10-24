@@ -37,6 +37,10 @@ jobs:
           if [ ! -f android/gradlew ] || [ ! -f android/gradle/wrapper/gradle-wrapper.properties ]; then
             flutter create --platforms=android --org com.ostadchi --project-name ostadchi .
           fi
+      - name: Remove conflicting legacy Android Gradle files
+        working-directory: .build_source/ostadchi_flutter
+        run: |
+          rm -f android/build.gradle android/app/build.gradle android/settings.gradle
       - name: Get dependencies
         working-directory: .build_source/ostadchi_flutter
         run: flutter pub get
