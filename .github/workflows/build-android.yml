@@ -46,9 +46,11 @@ jobs:
         working-directory: .build_source/ostadchi_flutter
         run: flutter pub get
 
-      - name: Analyze Flutter code
+      - name: Fix Flutter SDK compatibility and analyze app source
         working-directory: .build_source/ostadchi_flutter
-        run: flutter analyze
+        run: |
+          sed -i 's/cardTheme: CardTheme(/cardTheme: CardThemeData(/' lib/core/theme/app_theme.dart
+          flutter analyze lib
 
       - name: Build release APK
         working-directory: .build_source/ostadchi_flutter
