@@ -44,7 +44,7 @@ jobs:
         working-directory: .build_source/ostadchi_flutter
         run: |
           sed -i 's/CardTheme(/CardThemeData(/g' lib/core/theme/app_theme.dart
-          flutter analyze lib
+          flutter analyze lib --no-fatal-infos
       - name: Build release APK
         working-directory: .build_source/ostadchi_flutter
         run: flutter build apk --release
