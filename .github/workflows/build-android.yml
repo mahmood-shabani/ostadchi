@@ -37,6 +37,8 @@ jobs:
           cp "$GITHUB_WORKSPACE/ostadchi_flutter_fixes/lib/core/config/app_config.dart" lib/core/config/app_config.dart
           cp "$GITHUB_WORKSPACE/ostadchi_flutter_fixes/lib/main.dart" lib/main.dart
           cp "$GITHUB_WORKSPACE/ostadchi_flutter_fixes/test_widget_test.dart" test_widget_test.dart
+          mkdir -p test
+          cp "$GITHUB_WORKSPACE/ostadchi_flutter_fixes/test_widget_test.dart" test/widget_test.dart
       - name: Restore Android project scaffolding if missing
         working-directory: .build_source/ostadchi_flutter
         run: |
