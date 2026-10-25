@@ -31,6 +31,12 @@ jobs:
         run: |
           unzip -q ostadchi_flutter_v0.3_build_ready.zip -d .build_source
           test -f .build_source/ostadchi_flutter/pubspec.yaml
+      - name: Apply startup configuration fixes
+        working-directory: .build_source/ostadchi_flutter
+        run: |
+          cp "$GITHUB_WORKSPACE/ostadchi_flutter_fixes/lib/core/config/app_config.dart" lib/core/config/app_config.dart
+          cp "$GITHUB_WORKSPACE/ostadchi_flutter_fixes/lib/main.dart" lib/main.dart
+          cp "$GITHUB_WORKSPACE/ostadchi_flutter_fixes/test_widget_test.dart" test_widget_test.dart
       - name: Restore Android project scaffolding if missing
         working-directory: .build_source/ostadchi_flutter
         run: |
@@ -57,7 +63,8 @@ jobs:
         working-directory: .build_source/ostadchi_flutter
         run: |
           sed -i 's/CardTheme(/CardThemeData(/g' lib/core/theme/app_theme.dart
-          flutter analyze lib --no-fatal-infos
+          flutter analyze lib
+          flutter test
       - name: Build release APK
         working-directory: .build_source/ostadchi_flutter
         env:
