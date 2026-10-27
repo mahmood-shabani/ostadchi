@@ -6,6 +6,10 @@ workflows:
     environment:
       flutter: stable
     scripts:
+      - name: Check Flutter installation
+        script: flutter --version
+      - name: Generate Android platform and Gradle wrapper
+        script: flutter create --platforms=android .
       - name: Get dependencies
         script: flutter pub get
       - name: Analyze Dart code
