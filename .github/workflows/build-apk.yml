@@ -1,0 +1,50 @@
+name: Build Ostadchi APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android platform files
+        run: flutter create --platforms=android .
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+      - name: Test
+        run: flutter test
+      - name: Build APK
+        run: flutter build apk --debug
+      - name: Package APK and source
+        run: |
+          mkdir -p release
+          cp build/app/outputs/flutter-apk/app-debug.apk release/ostadchi-debug.apk
+          zip -r release/ostadchi-source.zip lib test android pubspec.yaml analysis_options.yaml codemagic.yaml README.md
+          cd release
+          zip ostadchi-apk-and-source.zip ostadchi-debug.apk ostadchi-source.zip
+      - name: Upload release ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: ostadchi-apk-and-source
+          path: release/ostadchi-apk-and-source.zip
+          if-no-files-found: error
+          retention-days: 14
