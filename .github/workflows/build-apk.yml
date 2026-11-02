@@ -29,7 +29,7 @@ jobs:
       - name: Fix Android Gradle configuration
         run: |
           rm -f android/settings.gradle android/build.gradle android/app/build.gradle
-          sed -i 's/gradle-8\.4-all\.zip/gradle-8.14.3-all.zip/' android/gradle/wrapper/gradle-wrapper.properties
+          sed -i 's/gradle-8\.4-all\.zip/gradle-9.3.1-bin.zip/' android/gradle/wrapper/gradle-wrapper.properties
           grep distributionUrl android/gradle/wrapper/gradle-wrapper.properties
       - name: Get dependencies
         run: flutter pub get
