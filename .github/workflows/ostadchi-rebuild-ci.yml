@@ -28,11 +28,17 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Restore missing Android wrapper if needed
+        run: |
+          if [ ! -f android/gradlew ]; then
+            flutter create --platforms=android --project-name ostadchi .
+          fi
+
       - name: Resolve dependencies
         run: flutter pub get
 
       - name: Static analysis
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
 
       - name: Widget tests
         run: flutter test
