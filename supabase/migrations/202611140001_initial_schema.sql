@@ -156,11 +156,12 @@ select
   wp.years_experience,
   wp.is_verified,
   wp.is_available,
+  wp.created_at,
   coalesce(round(avg(r.rating)::numeric, 1), 0) as rating,
   count(r.id)::integer as review_count
 from public.worker_profiles wp
 left join public.reviews r on r.worker_id = wp.user_id
-group by wp.user_id;
+group by wp.user_id, wp.created_at;
 
 create index if not exists idx_worker_profiles_city_category
   on public.worker_profiles(city, category_id) where is_available = true;
