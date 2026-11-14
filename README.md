@@ -1,11 +1,64 @@
-# Ostadchi Flutter v0.4.1
+# استادچی — بازطراحی معماری 0.5.0
 
-Flutter source for the Ostadchi skilled-workers marketplace prototype.
+این نسخه بازطراحی ساختاری پروژه است. هدف آن تبدیل نمونه نمایشی قبلی به پایه‌ای قابل توسعه برای بازارگاه استادکاران است.
 
-The project source is arranged at the repository root so build services can identify it as a Flutter project. The Codemagic workflow first runs `flutter create --platforms=android .` to generate the Android platform files and Gradle wrapper, then fetches dependencies, runs analysis and tests, and builds a debug APK.
+## نکته مهم درباره وضعیت فعلی
+- مرور استادکارها در حالت نمونه (Demo) با داده‌های نمونه کار می‌کند.
+- انتخاب شهر با `shared_preferences` روی دستگاه ذخیره می‌شود.
+- جست‌وجو، فیلتر تخصص، بازکردن پروفایل و پیمایش صفحات پیاده‌سازی شده‌اند.
+- ورود OTP پس از فعال‌شدن Supabase و تنظیم ارائه‌دهنده SMS کار می‌کند؛ پس از ورود، پروفایل پایه کاربر در جدول profiles ایجاد/به‌روزرسانی می‌شود.
+- ثبت درخواست و فهرست درخواست‌های حساب فقط پس از فعال‌شدن و پیکربندی Supabase عملیاتی می‌شوند.
+- داده‌های نمونه هرگز به‌عنوان داده واقعی یا ذخیره‌شده معرفی نمی‌شوند.
+- این نسخه هنوز APK تأییدشده نیست؛ باید در محیط Flutter/Codemagic تحلیل، تست و ساخته شود.
 
-**Important:** If using the ZIP, extract it first and put the project contents in the GitHub repository root so `pubspec.yaml` is visible on the repository home page. Do not upload only the ZIP file; Codemagic does not automatically treat files inside a ZIP as the project.
+## ساختار
+- `lib/core`: پیکربندی و پوسته ظاهری
+- `lib/models`: مدل‌های داده
+- `lib/data`: دسته‌بندی‌ها و داده نمونه
+- `lib/services`: ذخیره شهر و دسترسی داده
+- `lib/features`: صفحه‌های خانه، جست‌وجو، پروفایل استادکار، درخواست، ورود و حساب
+- `supabase/migrations`: ساختار اولیه پایگاه داده و سیاست‌های RLS
 
-Current prototype: Persian home page and service categories only. Phone OTP, database, worker profiles, reviews, contracts, and payments are not connected yet.
+## اجرای محلی
+```bash
+flutter pub get
+flutter analyze
+flutter test
+flutter run
+```
 
-The APK build has not been run in this environment; the Codemagic workflow must confirm the final build.
+## پیکربندی Supabase
+ابتدا پروژه Supabase باید Active باشد. سپس در Codemagic این دو متغیر را به‌صورت Environment Variable تنظیم کنید:
+- `SUPABASE_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
+
+کلید Publishable را می‌توان در برنامه موبایل استفاده کرد؛ هرگز `service_role` یا کلید Secret را در برنامه موبایل قرار ندهید.
+
+ساخت APK:
+```bash
+flutter build apk --debug \
+  --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+  --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
+```
+
+## راه‌اندازی Supabase و پیامک
+1. پروژه Supabase را فعال کنید.
+2. فایل `supabase/migrations/202611140001_initial_schema.sql` را در SQL Editor اجرا کنید.
+3. ورود با Phone را در Auth فعال کنید.
+4. ارائه‌دهنده SMS را تنظیم و آزمایش کنید.
+5. کلید Publishable و URL را در متغیرهای Codemagic قرار دهید.
+6. پس از ساخت، OTP واقعی و دسترسی‌های RLS را آزمایش کنید.
+
+## نقشه مراحل بعدی
+1. تکمیل و تست پروفایل مشتری و استادکار و انتخاب هر دو نقش برای یک حساب
+2. آپلود تصویر پروفایل و نمونه‌کار در Storage با سیاست دسترسی محدود
+3. گردش درخواست: پیشنهاد قیمت، انتخاب استادکار، تغییر وضعیت و لغو (با عملیات امن سمت سرور/RPC)
+4. قرارداد با پذیرش جداگانه طرفین و ثبت زمان پذیرش
+5. ثبت نظر فقط پس از تکمیل درخواست
+6. خدمات چندگانه استادکار با زیردسته و بازه قیمت، درخواست تأیید حضوری و بارگذاری امن تصاویر نمونه‌کار در Storage
+7. فرایند تأیید حضوری استادکار و پنل مدیریت/گزارش تخلف
+8. چت امن بین طرفین
+9. پرداخت و کیف پول پس از طراحی حقوقی و مالی جداگانه
+
+## محدودیت فعلی
+به‌دلیل نبود Flutter SDK در محیط آماده‌سازی، این بسته هنوز از نظر `flutter analyze`, `flutter test` و ساخت APK تأیید نشده است. این سه مرحله باید در Codemagic اجرا شوند و خطاها قبل از نصب روی گوشی رفع شوند.

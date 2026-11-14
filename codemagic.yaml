@@ -1,22 +1,21 @@
 workflows:
-  android-debug:
-    name: Ostadchi Android debug APK
+  ostadchi-android-debug:
+    name: Ostadchi Android debug
     max_build_duration: 60
     instance_type: linux_x2
     environment:
       flutter: stable
     scripts:
-      - name: Check Flutter installation
-        script: flutter --version
-      - name: Generate Android platform and Gradle wrapper
-        script: flutter create --platforms=android .
-      - name: Get dependencies
+      - name: Resolve packages
         script: flutter pub get
-      - name: Analyze Dart code
+      - name: Static analysis
         script: flutter analyze
-      - name: Run widget tests
+      - name: Widget tests
         script: flutter test
       - name: Build debug APK
-        script: flutter build apk --debug
+        script: |
+          flutter build apk --debug \
+            --dart-define=SUPABASE_URL=${SUPABASE_URL:-} \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY=${SUPABASE_PUBLISHABLE_KEY:-}
     artifacts:
       - build/app/outputs/flutter-apk/app-debug.apk
