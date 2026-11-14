@@ -28,10 +28,12 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Restore missing Android wrapper if needed
+      - name: Regenerate incomplete Android project with the installed Flutter template
         run: |
           if [ ! -f android/gradlew ]; then
-            flutter create --platforms=android --project-name ostadchi .
+            rm -rf android
+            flutter create --platforms=android --project-name ostadchi --org com.example .
+            sed -i 's/android:label="ostadchi"/android:label="استادچی"/' android/app/src/main/AndroidManifest.xml
           fi
 
       - name: Resolve dependencies
