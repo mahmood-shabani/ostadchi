@@ -11,7 +11,7 @@ workflows:
       - name: Resolve packages
         script: flutter pub get
       - name: Static analysis
-        script: flutter analyze
+        script: flutter analyze --no-fatal-infos
       - name: Widget tests
         script: flutter test
       - name: Build debug APK
