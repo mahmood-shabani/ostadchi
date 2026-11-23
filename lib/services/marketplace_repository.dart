@@ -9,6 +9,44 @@ class MarketplaceRepository {
 
   SupabaseClient get _client => Supabase.instance.client;
 
+  // The home/search UI uses stable slugs, while Supabase stores category UUIDs.
+  // Resolve the UI slug to the existing database category before filtering/inserting.
+  static const Map<String, String> _categoryNames = {
+    'motorcycle': 'خودرو و موتورسیکلت',
+    'electrical': 'تأسیسات',
+    'plumbing': 'تأسیسات',
+    'cooling': 'تأسیسات',
+    'welding': 'جوشکاری',
+    'construction': 'ساختمان',
+    'painting': 'ساختمان',
+  };
+
+  Future<String?> _resolveCategoryUuid(String? categoryId) async {
+    if (categoryId == null || categoryId.isEmpty) return null;
+
+    // Profile forms already provide a UUID; only resolve UI slugs.
+    final isUuid = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    ).hasMatch(categoryId);
+    if (isUuid) return categoryId;
+
+    final categoryName = _categoryNames[categoryId];
+    // "Other services" has no dedicated row in the current database.
+    // Do not send its text slug to a UUID column.
+    if (categoryName == null) return null;
+
+    final rows = await _client
+        .from('categories')
+        .select('id, name')
+        .eq('is_active', true)
+        .eq('name', categoryName)
+        .limit(1);
+    if (rows.isEmpty) {
+      throw StateError('دسته‌بندی «$categoryName» در پایگاه داده پیدا نشد.');
+    }
+    return rows.first['id'].toString();
+  }
+
   Future<List<String>> getCityNames() async {
     if (!isOnline) return ['آبادان', 'خرمشهر', 'اهواز', 'ماهشهر', 'تهران', 'اصفهان'];
     try {
@@ -33,6 +71,7 @@ class MarketplaceRepository {
       );
     }
 
+    final resolvedCategoryId = await _resolveCategoryUuid(categoryId);
     var query = _client
         .from('worker_directory')
         .select(
@@ -44,8 +83,8 @@ class MarketplaceRepository {
     if (city != null && city.isNotEmpty) {
       query = query.eq('city', city);
     }
-    if (categoryId != null && categoryId.isNotEmpty) {
-      query = query.eq('category_id', categoryId);
+    if (resolvedCategoryId != null) {
+      query = query.eq('category_id', resolvedCategoryId);
     }
     if (search.trim().isNotEmpty) {
       query = query.ilike('display_name', '%${search.trim()}%');
@@ -90,13 +129,17 @@ class MarketplaceRepository {
     if (user == null) {
       throw StateError('برای ثبت درخواست ابتدا وارد حساب کاربری شوید.');
     }
+    final resolvedCategoryId = await _resolveCategoryUuid(categoryId);
+    if (resolvedCategoryId == null) {
+      throw StateError('برای این دسته‌بندی هنوز شناسه‌ای در پایگاه داده تعریف نشده است.');
+    }
     await _client.from('work_requests').insert({
       'customer_id': user.id,
       'worker_id': workerId,
       'title': title,
       'description': description,
       'city': city,
-      'category_id': categoryId,
+      'category_id': resolvedCategoryId,
       'status': 'open',
     });
   }
