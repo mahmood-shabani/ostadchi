@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_config.dart';
 import '../auth/phone_auth_screen.dart';
+import '../../widgets/iran_location_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -56,9 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _categories = List<Map<String, dynamic>>.from(
         await _client.from('categories').select('id, name').eq('is_active', true).order('name'),
       );
-      _cities = List<Map<String, dynamic>>.from(
-        await _client.from('cities').select('id, name, province').eq('is_active', true).order('name'),
-      );
+      _cities = [];
       final profile = await _client
           .from('profiles')
           .select('display_name, selected_city_id, avatar_url')
@@ -68,8 +67,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _nameController.text = (profile['display_name'] ?? '').toString();
         _avatarUrl = profile['avatar_url']?.toString();
         final cityId = profile['selected_city_id']?.toString();
-        if (cityId != null && _cities.any((city) => city['id'].toString() == cityId)) {
-          _selectedCityId = cityId;
+        if (cityId != null) {
+          final city = await _client.from('cities')
+              .select('id,name,province,province_id')
+              .eq('id', cityId).maybeSingle();
+          if (city != null) {
+            _selectedCityId = cityId;
+            _cities = [Map<String, dynamic>.from(city)];
+          }
         }
         _hasProfile = _nameController.text.trim().isNotEmpty &&
             _selectedCityId != null;
@@ -130,6 +135,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  Future<void> _chooseProfileLocation() async {
+    final selected = await showIranLocationPicker(
+      context,
+      initialCityId: _selectedCityId,
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      _selectedCityId = selected['city_id']?.toString();
+      _cities = [{
+        'id': selected['city_id'],
+        'name': selected['city_name'],
+        'province': selected['province_name'],
+        'province_id': selected['province_id'],
+      }];
+      _hasProfile = false;
+    });
   }
 
   Future<void> _saveBasicProfile() async {
@@ -338,24 +361,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           decoration: const InputDecoration(labelText: 'نام و نام خانوادگی'),
                         ),
                         const SizedBox(height: 10),
-                        DropdownButtonFormField<String>(
-                          value: _selectedCityId,
-                          isExpanded: true,
-                          decoration: const InputDecoration(labelText: 'انتخاب شهر'),
-                          hint: const Text('شهر خود را انتخاب کنید'),
-                          items: _cities.map((city) {
-                            final province = city['province']?.toString();
-                            final label = province == null || province.isEmpty
-                                ? city['name'].toString()
-                                : '${city['name']} - $province';
-                            return DropdownMenuItem<String>(
-                              value: city['id'].toString(),
-                              child: Text(label),
-                            );
-                          }).toList(),
-                          onChanged: _saving
-                              ? null
-                              : (value) => setState(() => _selectedCityId = value),
+                        OutlinedButton.icon(
+                          onPressed: _saving ? null : _chooseProfileLocation,
+                          icon: const Icon(Icons.location_on_outlined),
+                          label: Text(_cities.isEmpty
+                              ? 'انتخاب استان و شهر'
+                              : '${_cities.first['name']} - ${_cities.first['province'] ?? ''}'),
                         ),
                         const SizedBox(height: 14),
                         FilledButton(
