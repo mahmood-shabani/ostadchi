@@ -9,6 +9,17 @@ class MarketplaceRepository {
 
   SupabaseClient get _client => Supabase.instance.client;
 
+  Future<List<String>> getCityNames() async {
+    if (!isOnline) return ['آبادان', 'خرمشهر', 'اهواز', 'ماهشهر', 'تهران', 'اصفهان'];
+    try {
+      final rows = await _client.from('cities').select('name').eq('is_active', true).order('name');
+      final names = (rows as List).map((row) => row['name']?.toString() ?? '').where((name) => name.isNotEmpty).toList();
+      return names.isEmpty ? ['آبادان', 'خرمشهر', 'اهواز', 'ماهشهر', 'تهران', 'اصفهان'] : names;
+    } catch (_) {
+      return ['آبادان', 'خرمشهر', 'اهواز', 'ماهشهر', 'تهران', 'اصفهان'];
+    }
+  }
+
   Future<List<Worker>> getWorkers({
     String? city,
     String? categoryId,
