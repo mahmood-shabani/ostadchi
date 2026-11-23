@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_config.dart';
@@ -21,6 +22,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _saving = false;
   bool _hasProfile = false;
   bool _hasWorkerProfile = false;
+  String? _avatarUrl;
+  final ImagePicker _imagePicker = ImagePicker();
   String? _categoryId;
   String? _selectedCityId;
   List<Map<String, dynamic>> _categories = [];
@@ -58,11 +61,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
       final profile = await _client
           .from('profiles')
-          .select('display_name, selected_city_id')
+          .select('display_name, selected_city_id, avatar_url')
           .eq('id', userId)
           .maybeSingle();
       if (profile != null) {
         _nameController.text = (profile['display_name'] ?? '').toString();
+        _avatarUrl = profile['avatar_url']?.toString();
         final cityId = profile['selected_city_id']?.toString();
         if (cityId != null && _cities.any((city) => city['id'].toString() == cityId)) {
           _selectedCityId = cityId;
@@ -97,6 +101,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await _loadProfile();
     } else {
       setState(() {});
+    }
+  }
+
+  Future<void> _chooseProfilePhoto() async {
+    final user = _client.auth.currentUser;
+    if (user == null) return;
+    try {
+      final picked = await _imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 82, maxWidth: 1200);
+      if (picked == null) return;
+      setState(() => _saving = true);
+      final bytes = await picked.readAsBytes();
+      final extension = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+      final path = '\${user.id}/avatar_\${DateTime.now().millisecondsSinceEpoch}.$extension';
+      await _client.storage.from('profile-photos').uploadBinary(
+        path, bytes,
+        fileOptions: FileOptions(contentType: extension == 'png' ? 'image/png' : 'image/jpeg', upsert: true),
+      );
+      final url = _client.storage.from('profile-photos').getPublicUrl(path);
+      await _client.from('profiles').upsert({'id': user.id, 'phone': user.phone, 'avatar_url': url}, onConflict: 'id');
+      if (!mounted) return;
+      setState(() => _avatarUrl = url);
+      _showMessage('عکس پروفایل ذخیره شد.');
+    } catch (error) {
+      _showMessage('ذخیره عکس انجام نشد. ابتدا دستور SQL پوشه migrations را در Supabase اجرا کنید: $error');
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -172,6 +202,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _hasProfile = false;
       _hasWorkerProfile = false;
+      _avatarUrl = null;
       _nameController.clear();
       _selectedCityId = null;
     });
@@ -219,12 +250,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        CircleAvatar(
-                          radius: 30,
-                          child: Icon(
-                            _hasWorkerProfile ? Icons.engineering : Icons.person,
-                            size: 30,
-                          ),
+                        Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 32,
+                              backgroundImage: _avatarUrl == null || _avatarUrl!.isEmpty ? null : NetworkImage(_avatarUrl!),
+                              child: _avatarUrl == null || _avatarUrl!.isEmpty
+                                  ? Icon(_hasWorkerProfile ? Icons.engineering : Icons.person, size: 30)
+                                  : null,
+                            ),
+                            Positioned(
+                              bottom: 0, right: 0,
+                              child: InkWell(
+                                onTap: _saving ? null : _chooseProfilePhoto,
+                                borderRadius: BorderRadius.circular(20),
+                                child: const CircleAvatar(radius: 12, child: Icon(Icons.camera_alt, size: 14)),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -241,7 +284,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               const SizedBox(height: 5),
                               Text(
-                                _hasWorkerProfile ? 'کاربر • استادکار' : 'کاربر',
+                                _hasWorkerProfile ? 'استادکار' : 'کاربر',
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                               if (_selectedCityId != null)
