@@ -113,7 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() => _saving = true);
       final bytes = await picked.readAsBytes();
       final extension = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
-      final path = '\${user.id}/avatar_\${DateTime.now().millisecondsSinceEpoch}.$extension';
+      final path = '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.$extension';
       await _client.storage.from('profile-photos').uploadBinary(
         path, bytes,
         fileOptions: FileOptions(contentType: extension == 'png' ? 'image/png' : 'image/jpeg', upsert: true),
