@@ -76,11 +76,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
       final worker = await _client
           .from('worker_profiles')
-          .select('profession, bio, experience_years')
+          .select('profession, bio, experience_years, category_id')
           .eq('user_id', userId)
           .maybeSingle();
       if (worker != null) {
         _hasWorkerProfile = true;
+        _categoryId = worker['category_id']?.toString();
         _workerHeadlineController.text = (worker['profession'] ?? '').toString();
         _workerBioController.text = (worker['bio'] ?? '').toString();
         _yearsController.text = (worker['experience_years'] ?? 0).toString();
@@ -175,12 +176,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() => _saving = true);
     try {
-      await _client.from('worker_profiles').upsert({
+      final workerRow = await _client.from('worker_profiles').upsert({
         'user_id': user.id,
         'profession': '${_categories.firstWhere((item) => item['id'].toString() == _categoryId)['name']} - $headline',
         'bio': _workerBioController.text.trim(),
         'experience_years': years,
-      }, onConflict: 'user_id');
+        'category_id': _categoryId,
+      }, onConflict: 'user_id').select('id').single();
+
+      final workerProfileId = workerRow['id'].toString();
+      await _client.from('worker_cities').delete().eq('worker_id', workerProfileId);
+      await _client.from('worker_cities').insert({
+        'worker_id': workerProfileId,
+        'city_id': _selectedCityId,
+      });
       await _client.from('user_roles').upsert({
         'user_id': user.id,
         'role': 'worker',
