@@ -22,11 +22,16 @@ class WorkerDetailScreen extends StatelessWidget {
               child: Column(
                 children: [
                   CircleAvatar(
-                    radius: 38,
-                    child: Text(
-                      worker.name.isEmpty ? 'ا' : worker.name.substring(0, 1),
-                      style: const TextStyle(fontSize: 28),
-                    ),
+                    radius: 42,
+                    backgroundImage: worker.avatarUrl == null || worker.avatarUrl!.isEmpty
+                        ? null
+                        : NetworkImage(worker.avatarUrl!),
+                    child: worker.avatarUrl == null || worker.avatarUrl!.isEmpty
+                        ? Text(
+                            worker.name.isEmpty ? 'ا' : worker.name.substring(0, 1),
+                            style: const TextStyle(fontSize: 28),
+                          )
+                        : null,
                   ),
                   const SizedBox(height: 12),
                   Text(
