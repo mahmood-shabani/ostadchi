@@ -37,7 +37,7 @@ class MarketplaceRepository {
         .from('worker_directory')
         .select(
           'user_id, display_name, headline, bio, city, category_id, '
-          'years_experience, is_verified, is_available, rating, review_count',
+          'years_experience, is_verified, is_available, avatar_url, rating, review_count',
         )
         .eq('is_available', true);
 
