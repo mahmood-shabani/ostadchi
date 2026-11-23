@@ -217,6 +217,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 30,
+                          child: Icon(
+                            _hasWorkerProfile ? Icons.engineering : Icons.person,
+                            size: 30,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _nameController.text.trim().isEmpty
+                                    ? 'پروفایل شما'
+                                    : _nameController.text.trim(),
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                _hasWorkerProfile ? 'کاربر • استادکار' : 'کاربر',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              if (_selectedCityId != null)
+                                Text(
+                                  _cities
+                                      .where((city) => city['id'].toString() == _selectedCityId)
+                                      .map((city) => '${city['name']} - ${city['province'] ?? ''}')
+                                      .firstOrNull ?? '',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'تازه‌سازی پروفایل',
+                          onPressed: _loading || _saving ? null : _loadProfile,
+                          icon: const Icon(Icons.refresh),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
