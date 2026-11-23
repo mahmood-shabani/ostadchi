@@ -11,6 +11,7 @@ class Worker {
     required this.isVerified,
     required this.isAvailable,
     this.bio = '',
+    this.avatarUrl,
   });
 
   final String userId;
@@ -24,6 +25,7 @@ class Worker {
   final bool isVerified;
   final bool isAvailable;
   final String bio;
+  final String? avatarUrl;
 
   factory Worker.fromMap(Map<String, dynamic> map) {
     return Worker(
@@ -38,6 +40,7 @@ class Worker {
       isVerified: map['is_verified'] == true,
       isAvailable: map['is_available'] != false,
       bio: map['bio']?.toString() ?? '',
+      avatarUrl: map['avatar_url']?.toString(),
     );
   }
 }
