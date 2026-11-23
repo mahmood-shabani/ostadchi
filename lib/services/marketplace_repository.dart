@@ -19,6 +19,7 @@ class MarketplaceRepository {
     'welding': 'جوشکاری',
     'construction': 'ساختمان',
     'painting': 'ساختمان',
+    'other': 'سایر خدمات',
   };
 
   Future<String?> _resolveCategoryUuid(String? categoryId) async {
