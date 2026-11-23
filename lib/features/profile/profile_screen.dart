@@ -128,7 +128,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _saveWorkerProfile() async {
     final user = _client.auth.currentUser;
-    final name = _nameController.text.trim();
     final headline = _workerHeadlineController.text.trim();
     final years = int.tryParse(_yearsController.text.trim());
     if (user == null) {
