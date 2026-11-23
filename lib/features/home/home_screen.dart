@@ -9,42 +9,7 @@ import '../requests/create_request_screen.dart';
 import '../requests/requests_screen.dart';
 import '../search/search_screen.dart';
 import '../workers/worker_detail_screen.dart';
-
-class _CityPicker extends StatefulWidget {
-  const _CityPicker({required this.currentCity, required this.cities});
-
-  final String currentCity;
-  final List<String> cities;
-
-  @override
-  State<_CityPicker> createState() => _CityPickerState();
-}
-
-class _CityPickerState extends State<_CityPicker> {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: ListView(
-        shrinkWrap: true,
-        children: [
-          const ListTile(
-            title: Text('انتخاب شهر', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          ...widget.cities.map((city) => ListTile(
-                title: Text(city),
-                trailing: city == widget.currentCity
-                    ? const Icon(Icons.check, color: Colors.green)
-                    : null,
-                onTap: () => Navigator.pop(context, city),
-              )),
-        ],
-      ),
-    );
-  }
-}
+import '../../widgets/iran_location_picker.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -60,20 +25,12 @@ class _HomeScreenState extends State<HomeScreen> {
   final _repository = MarketplaceRepository();
   late Future<List<Worker>> _workers;
 
-  List<String> _cities = ['آبادان', 'خرمشهر', 'اهواز', 'ماهشهر', 'تهران', 'اصفهان'];
 
   @override
   void initState() {
     super.initState();
     _workers = _repository.getWorkers(city: _city);
     _loadCity();
-    _loadCities();
-  }
-
-  Future<void> _loadCities() async {
-    final cities = await _repository.getCityNames();
-    if (!mounted) return;
-    setState(() => _cities = cities);
   }
 
   Future<void> _loadCity() async {
@@ -86,21 +43,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _chooseCity() async {
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => SafeArea(
-        child: _CityPicker(
-          currentCity: _city,
-          cities: _cities,
-        ),
-      ),
+    final current = await _repository.getCityByName(_city);
+    if (!mounted) return;
+    final selected = await showIranLocationPicker(
+      context,
+      initialCityId: current?['id']?.toString(),
     );
     if (selected == null) return;
-    await _cityStore.saveSelectedCity(selected);
+    final cityName = selected['city_name'].toString();
+    await _cityStore.saveSelectedCity(cityName);
     if (!mounted) return;
     setState(() {
-      _city = selected;
+      _city = cityName;
       _workers = _repository.getWorkers(city: _city);
     });
   }
