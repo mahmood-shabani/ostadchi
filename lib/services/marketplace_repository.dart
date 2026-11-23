@@ -47,6 +47,34 @@ class MarketplaceRepository {
     return rows.first['id'].toString();
   }
 
+  Future<List<Map<String, dynamic>>> getCategories() async {
+    if (!isOnline) return [];
+    final rows = await _client.from('categories').select('id,name').eq('is_active', true).order('name');
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<String?> getCategoryIdForSlug(String slug) => _resolveCategoryUuid(slug);
+
+  Future<Map<String, dynamic>?> getCityByName(String name) async {
+    if (!isOnline) return null;
+    final row = await _client.from('cities').select('id,name,province,province_id')
+        .eq('name', name).eq('is_active', true).limit(1).maybeSingle();
+    return row == null ? null : Map<String, dynamic>.from(row);
+  }
+
+  Future<List<Map<String, dynamic>>> getProvinces() async {
+    if (!isOnline) return [];
+    final rows = await _client.from('provinces').select('id,name').eq('is_active', true).order('name');
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<List<Map<String, dynamic>>> getCitiesByProvince(String provinceId) async {
+    if (!isOnline) return [];
+    final rows = await _client.from('cities').select('id,name,province_id')
+        .eq('province_id', provinceId).eq('is_active', true).order('name');
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
   Future<List<String>> getCityNames() async {
     if (!isOnline) return ['آبادان', 'خرمشهر', 'اهواز', 'ماهشهر', 'تهران', 'اصفهان'];
     try {
@@ -118,28 +146,24 @@ class MarketplaceRepository {
   Future<void> createWorkRequest({
     required String title,
     required String description,
-    required String city,
+    required String cityId,
     required String categoryId,
     String? workerId,
   }) async {
-    if (!isOnline) {
-      throw StateError('اتصال پایگاه داده هنوز پیکربندی نشده است.');
-    }
+    if (!isOnline) throw StateError('اتصال پایگاه داده هنوز پیکربندی نشده است.');
     final user = _client.auth.currentUser;
-    if (user == null) {
-      throw StateError('برای ثبت درخواست ابتدا وارد حساب کاربری شوید.');
-    }
+    if (user == null) throw StateError('برای ثبت درخواست ابتدا وارد حساب کاربری شوید.');
     final resolvedCategoryId = await _resolveCategoryUuid(categoryId);
     if (resolvedCategoryId == null) {
       throw StateError('برای این دسته‌بندی هنوز شناسه‌ای در پایگاه داده تعریف نشده است.');
     }
-    await _client.from('work_requests').insert({
+    await _client.from('projects').insert({
       'customer_id': user.id,
-      'worker_id': workerId,
+      'city_id': cityId,
       'title': title,
       'description': description,
-      'city': city,
       'category_id': resolvedCategoryId,
+      'target_worker_id': workerId,
       'status': 'open',
     });
   }
@@ -147,8 +171,8 @@ class MarketplaceRepository {
   Future<List<Map<String, dynamic>>> getMyRequests() async {
     if (!isOnline || _client.auth.currentUser == null) return [];
     final rows = await _client
-        .from('work_requests')
-        .select('id, title, description, city, status, created_at')
+        .from('projects')
+        .select('id, title, description, status, created_at, cities(name, province)')
         .eq('customer_id', _client.auth.currentUser!.id)
         .order('created_at', ascending: false);
     return List<Map<String, dynamic>>.from(rows);
