@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - rebuild/v0.5.0
+      - feature/profile-city-updates
 
 permissions:
   contents: write
@@ -17,7 +18,7 @@ jobs:
       - name: Check out Ostadchi source
         uses: actions/checkout@v4
         with:
-          ref: rebuild/v0.5.0
+          ref: ${{ github.ref }}
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -82,8 +83,8 @@ jobs:
       - name: Publish APK in GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ostadchi-v0.5.0-build-${{ github.run_number }}
-          name: Ostadchi Android v0.5.0 (Build ${{ github.run_number }})
+          tag_name: ostadchi-v0.5.1-build-${{ github.run_number }}
+          name: Ostadchi Android v0.5.1 (Build ${{ github.run_number }})
           generate_release_notes: true
           files: build/app/outputs/flutter-apk/app-debug.apk
           fail_on_unmatched_files: true
