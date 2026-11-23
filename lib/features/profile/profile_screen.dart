@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_config.dart';
-import '../../data/service_categories.dart';
 import '../auth/phone_auth_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -24,6 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _hasProfile = false;
   bool _hasWorkerProfile = false;
   String? _categoryId;
+  List<Map<String, dynamic>> _categories = [];
 
   SupabaseClient get _client => Supabase.instance.client;
   bool get _signedIn =>
@@ -50,28 +50,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _loading = true);
     try {
       final userId = _client.auth.currentUser!.id;
+      _categories = List<Map<String, dynamic>>.from(
+        await _client.from('categories').select('id, name').eq('is_active', true).order('name'),
+      );
       final profile = await _client
           .from('profiles')
-          .select('full_name, selected_city')
+          .select('display_name, selected_city_id')
           .eq('id', userId)
           .maybeSingle();
       if (profile != null) {
-        _nameController.text = (profile['full_name'] ?? '').toString();
-        _cityController.text = (profile['selected_city'] ?? '').toString();
+        _nameController.text = (profile['display_name'] ?? '').toString();
+        final cityId = profile['selected_city_id']?.toString();
+        if (cityId != null) {
+          final city = await _client.from('cities').select('name').eq('id', cityId).maybeSingle();
+          _cityController.text = (city?['name'] ?? '').toString();
+        }
         _hasProfile = _nameController.text.trim().isNotEmpty &&
             _cityController.text.trim().isNotEmpty;
       }
       final worker = await _client
           .from('worker_profiles')
-          .select('display_name, headline, bio, city, category_id, years_experience')
+          .select('profession, bio, experience_years')
           .eq('user_id', userId)
           .maybeSingle();
       if (worker != null) {
         _hasWorkerProfile = true;
-        _workerHeadlineController.text = (worker['headline'] ?? '').toString();
+        _workerHeadlineController.text = (worker['profession'] ?? '').toString();
         _workerBioController.text = (worker['bio'] ?? '').toString();
-        _yearsController.text = (worker['years_experience'] ?? 0).toString();
-        _categoryId = worker['category_id']?.toString();
+        _yearsController.text = (worker['experience_years'] ?? 0).toString();
       }
     } catch (error) {
       _showMessage('دریافت اطلاعات حساب انجام نشد: $error');
@@ -103,11 +109,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final user = _client.auth.currentUser;
       if (user == null) throw StateError('ابتدا وارد حساب کاربری شوید.');
+      final cityRow = await _client.from('cities').select('id').ilike('name', city).eq('is_active', true).maybeSingle();
+      if (cityRow == null) {
+        throw StateError('این شهر در فهرست شهرهای فعال استادچی نیست. فعلاً آبادان، اهواز، تهران و خرمشهر ثبت شده‌اند.');
+      }
       await _client.from('profiles').upsert({
         'id': user.id,
         'phone': user.phone,
-        'full_name': name,
-        'selected_city': city,
+        'display_name': name,
+        'selected_city_id': cityRow['id'],
       }, onConflict: 'id');
       if (!mounted) return;
       setState(() => _hasProfile = true);
@@ -142,23 +152,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await _client.from('worker_profiles').upsert({
         'user_id': user.id,
-        'display_name': name,
-        'headline': headline,
+        'profession': headline,
         'bio': _workerBioController.text.trim(),
-        'city': city,
-        'category_id': _categoryId,
-        'years_experience': years,
-        'is_available': true,
+        'experience_years': years,
       }, onConflict: 'user_id');
-
-      final profile = await _client
-          .from('profiles')
-          .select('roles')
-          .eq('id', user.id)
-          .single();
-      final roles = List<String>.from(profile['roles'] ?? ['customer']);
-      if (!roles.contains('worker')) roles.add('worker');
-      await _client.from('profiles').update({'roles': roles}).eq('id', user.id);
+      await _client.from('user_roles').upsert({
+        'user_id': user.id,
+        'role': 'worker',
+      }, onConflict: 'user_id,role', ignoreDuplicates: true);
 
       if (!mounted) return;
       setState(() => _hasWorkerProfile = true);
@@ -274,10 +275,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           value: _categoryId,
                           isExpanded: true,
                           decoration: const InputDecoration(labelText: 'تخصص اصلی'),
-                          items: serviceCategories
-                              .map((item) => DropdownMenuItem(
-                                    value: item.id,
-                                    child: Text(item.title),
+                          items: _categories
+                              .map((item) => DropdownMenuItem<String>(
+                                    value: item['id'].toString(),
+                                    child: Text(item['name'].toString()),
                                   ))
                               .toList(),
                           onChanged: (value) => setState(() => _categoryId = value),
