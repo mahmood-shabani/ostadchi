@@ -21,14 +21,6 @@ class _CityPicker extends StatefulWidget {
 }
 
 class _CityPickerState extends State<_CityPicker> {
-  final _otherCityController = TextEditingController();
-
-  @override
-  void dispose() {
-    _otherCityController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -48,30 +40,6 @@ class _CityPickerState extends State<_CityPicker> {
                     : null,
                 onTap: () => Navigator.pop(context, city),
               )),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _otherCityController,
-                    decoration: const InputDecoration(
-                      labelText: 'نام شهر دیگر',
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  onPressed: () {
-                    final city = _otherCityController.text.trim();
-                    if (city.isNotEmpty) Navigator.pop(context, city);
-                  },
-                  icon: const Icon(Icons.check),
-                  tooltip: 'ثبت شهر',
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -92,15 +60,20 @@ class _HomeScreenState extends State<HomeScreen> {
   final _repository = MarketplaceRepository();
   late Future<List<Worker>> _workers;
 
-  static const _cities = [
-    'آبادان', 'خرمشهر', 'اهواز', 'ماهشهر', 'تهران', 'اصفهان',
-  ];
+  List<String> _cities = ['آبادان', 'خرمشهر', 'اهواز', 'ماهشهر', 'تهران', 'اصفهان'];
 
   @override
   void initState() {
     super.initState();
     _workers = _repository.getWorkers(city: _city);
     _loadCity();
+    _loadCities();
+  }
+
+  Future<void> _loadCities() async {
+    final cities = await _repository.getCityNames();
+    if (!mounted) return;
+    setState(() => _cities = cities);
   }
 
   Future<void> _loadCity() async {
