@@ -74,7 +74,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     return Card(
                       child: ListTile(
                         title: Text(row['title']?.toString() ?? 'درخواست'),
-                        subtitle: Text('${row['city'] ?? ''} • ${row['status'] ?? ''}'),
+                        subtitle: Text('${(row['cities'] as Map?)?['name'] ?? ''} • ${row['status'] ?? ''}'),
                       ),
                     );
                   },
