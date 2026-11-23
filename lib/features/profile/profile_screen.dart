@@ -152,7 +152,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await _client.from('worker_profiles').upsert({
         'user_id': user.id,
-        'profession': headline,
+        'profession': '${_categories.firstWhere((item) => item['id'].toString() == _categoryId)['name']} - $headline',
         'bio': _workerBioController.text.trim(),
         'experience_years': years,
       }, onConflict: 'user_id');
