@@ -46,3 +46,17 @@ group by
 grant select on public.worker_directory to anon, authenticated;
 grant select on public.cities to anon, authenticated;
 grant select on public.categories to anon, authenticated;
+
+-- Attach existing worker profiles to their saved account city and infer an existing category from the stored profession label.
+insert into public.worker_cities (worker_id, city_id)
+select wp.id, p.selected_city_id
+from public.worker_profiles wp
+join public.profiles p on p.id = wp.user_id
+where p.selected_city_id is not null
+on conflict (worker_id, city_id) do nothing;
+
+update public.worker_profiles wp
+set category_id = c.id
+from public.categories c
+where wp.category_id is null
+  and wp.profession like c.name || ' - %';
