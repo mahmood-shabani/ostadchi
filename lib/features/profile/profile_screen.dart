@@ -320,3 +320,5 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
+
+// User profile setup: basic user details and optional worker registration.
