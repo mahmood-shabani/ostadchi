@@ -13,7 +13,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _nameController = TextEditingController();
-  final _cityController = TextEditingController();
   final _workerHeadlineController = TextEditingController();
   final _workerBioController = TextEditingController();
   final _yearsController = TextEditingController(text: '0');
@@ -23,7 +22,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _hasProfile = false;
   bool _hasWorkerProfile = false;
   String? _categoryId;
+  String? _selectedCityId;
   List<Map<String, dynamic>> _categories = [];
+  List<Map<String, dynamic>> _cities = [];
 
   SupabaseClient get _client => Supabase.instance.client;
   bool get _signedIn =>
@@ -38,7 +39,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _cityController.dispose();
     _workerHeadlineController.dispose();
     _workerBioController.dispose();
     _yearsController.dispose();
@@ -53,6 +53,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _categories = List<Map<String, dynamic>>.from(
         await _client.from('categories').select('id, name').eq('is_active', true).order('name'),
       );
+      _cities = List<Map<String, dynamic>>.from(
+        await _client.from('cities').select('id, name, province').eq('is_active', true).order('name'),
+      );
       final profile = await _client
           .from('profiles')
           .select('display_name, selected_city_id')
@@ -61,12 +64,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (profile != null) {
         _nameController.text = (profile['display_name'] ?? '').toString();
         final cityId = profile['selected_city_id']?.toString();
-        if (cityId != null) {
-          final city = await _client.from('cities').select('name').eq('id', cityId).maybeSingle();
-          _cityController.text = (city?['name'] ?? '').toString();
+        if (cityId != null && _cities.any((city) => city['id'].toString() == cityId)) {
+          _selectedCityId = cityId;
         }
         _hasProfile = _nameController.text.trim().isNotEmpty &&
-            _cityController.text.trim().isNotEmpty;
+            _selectedCityId != null;
       }
       final worker = await _client
           .from('worker_profiles')
@@ -100,24 +102,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _saveBasicProfile() async {
     final name = _nameController.text.trim();
-    final city = _cityController.text.trim();
-    if (name.isEmpty || city.isEmpty) {
-      _showMessage('نام و شهر را وارد کنید.');
+    if (name.isEmpty || _selectedCityId == null) {
+      _showMessage('نام را وارد کنید و شهر را از فهرست انتخاب کنید.');
       return;
     }
     setState(() => _saving = true);
     try {
       final user = _client.auth.currentUser;
       if (user == null) throw StateError('ابتدا وارد حساب کاربری شوید.');
-      final cityRow = await _client.from('cities').select('id').ilike('name', city).eq('is_active', true).maybeSingle();
-      if (cityRow == null) {
-        throw StateError('این شهر در فهرست شهرهای فعال استادچی نیست. فعلاً آبادان، اهواز، تهران و خرمشهر ثبت شده‌اند.');
-      }
       await _client.from('profiles').upsert({
         'id': user.id,
         'phone': user.phone,
         'display_name': name,
-        'selected_city_id': cityRow['id'],
+        'selected_city_id': _selectedCityId,
       }, onConflict: 'id');
       if (!mounted) return;
       setState(() => _hasProfile = true);
@@ -132,7 +129,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _saveWorkerProfile() async {
     final user = _client.auth.currentUser;
     final name = _nameController.text.trim();
-    final city = _cityController.text.trim();
     final headline = _workerHeadlineController.text.trim();
     final years = int.tryParse(_yearsController.text.trim());
     if (user == null) {
@@ -178,7 +174,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _hasProfile = false;
       _hasWorkerProfile = false;
       _nameController.clear();
-      _cityController.clear();
+      _selectedCityId = null;
     });
   }
 
@@ -239,10 +235,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           decoration: const InputDecoration(labelText: 'نام و نام خانوادگی'),
                         ),
                         const SizedBox(height: 10),
-                        TextField(
-                          controller: _cityController,
-                          textInputAction: TextInputAction.done,
-                          decoration: const InputDecoration(labelText: 'شهر'),
+                        DropdownButtonFormField<String>(
+                          value: _selectedCityId,
+                          isExpanded: true,
+                          decoration: const InputDecoration(labelText: 'انتخاب شهر'),
+                          hint: const Text('شهر خود را انتخاب کنید'),
+                          items: _cities.map((city) {
+                            final province = city['province']?.toString();
+                            final label = province == null || province.isEmpty
+                                ? city['name'].toString()
+                                : '${city['name']} - $province';
+                            return DropdownMenuItem<String>(
+                              value: city['id'].toString(),
+                              child: Text(label),
+                            );
+                          }).toList(),
+                          onChanged: _saving
+                              ? null
+                              : (value) => setState(() => _selectedCityId = value),
                         ),
                         const SizedBox(height: 14),
                         FilledButton(
