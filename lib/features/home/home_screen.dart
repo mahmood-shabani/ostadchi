@@ -233,7 +233,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute(builder: (_) => WorkerDetailScreen(worker: worker)),
                             ),
-                            leading: const CircleAvatar(child: Icon(Icons.engineering)),
+                            leading: CircleAvatar(
+                              backgroundImage: worker.avatarUrl == null || worker.avatarUrl!.isEmpty
+                                  ? null
+                                  : NetworkImage(worker.avatarUrl!),
+                              child: worker.avatarUrl == null || worker.avatarUrl!.isEmpty
+                                  ? const Icon(Icons.engineering)
+                                  : null,
+                            ),
                             title: Text(worker.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                             subtitle: Text('${worker.headline}\n${worker.experienceYears} سال سابقه'),
                             isThreeLine: true,
