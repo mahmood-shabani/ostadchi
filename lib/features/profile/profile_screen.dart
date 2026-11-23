@@ -113,11 +113,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (picked == null) return;
       setState(() => _saving = true);
       final bytes = await picked.readAsBytes();
-      final extension = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+      final mimeType = picked.mimeType ?? 'image/jpeg';
+      final extension = mimeType == 'image/png' ? 'png' : mimeType == 'image/webp' ? 'webp' : 'jpg';
       final path = '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.$extension';
       await _client.storage.from('profile-photos').uploadBinary(
         path, bytes,
-        fileOptions: FileOptions(contentType: extension == 'png' ? 'image/png' : 'image/jpeg', upsert: true),
+        fileOptions: FileOptions(contentType: mimeType, upsert: true),
       );
       final url = _client.storage.from('profile-photos').getPublicUrl(path);
       await _client.from('profiles').upsert({'id': user.id, 'phone': user.phone, 'avatar_url': url}, onConflict: 'id');
