@@ -54,9 +54,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _loading = true);
     try {
       final userId = _client.auth.currentUser!.id;
-      _categories = List<Map<String, dynamic>>.from(
-        await _client.from('categories').select('id, name').eq('is_active', true).order('name'),
+      final categoryRows = List<Map<String, dynamic>>.from(
+        await _client.from('categories').select('id, name, parent_id').eq('is_active', true).order('name'),
       );
+      final categoryNamesById = {
+        for (final item in categoryRows) item['id'].toString(): item['name'].toString(),
+      };
+      _categories = categoryRows.map((item) {
+        final parentName = categoryNamesById[item['parent_id']?.toString()];
+        return {
+          ...item,
+          'display_name': parentName == null
+              ? item['name'].toString()
+              : parentName + ' — ' + item['name'].toString(),
+        };
+      }).toList();
       _cities = [];
       final profile = await _client
           .from('profiles')
@@ -402,7 +414,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           items: _categories
                               .map((item) => DropdownMenuItem<String>(
                                     value: item['id'].toString(),
-                                    child: Text(item['name'].toString()),
+                                    child: Text((item['display_name'] ?? item['name']).toString()),
                                   ))
                               .toList(),
                           onChanged: (value) => setState(() => _categoryId = value),
