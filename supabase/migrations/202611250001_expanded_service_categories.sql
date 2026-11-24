@@ -4,6 +4,12 @@ alter table public.categories
 create index if not exists idx_categories_parent_active
   on public.categories(parent_id, is_active);
 
+-- Preserve existing category UUIDs while giving the legacy main groups clearer names.
+update public.categories set name='خودرو' where name='خودرو و موتورسیکلت';
+update public.categories set name='ساختمان و مصالح' where name='ساختمان';
+update public.categories set name='تأسیسات و لوله‌کشی' where name='تأسیسات';
+update public.categories set name='جوشکاری و فلزکاری' where name='جوشکاری';
+
 with roots(name, icon_key) as (
   values
   ('تعمیرات موتورسیکلت','two_wheeler'),('خودرو','directions_car'),
