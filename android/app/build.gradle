@@ -1,8 +1,17 @@
+import java.util.Properties
+
 plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
+
+def signingProperties = new Properties()
+def signingPropertiesFile = rootProject.file("key.properties")
+if (signingPropertiesFile.exists()) {
+    signingPropertiesFile.withInputStream { signingProperties.load(it) }
+}
+
 android {
     namespace "com.example.ostadchi"
     compileSdk flutter.compileSdkVersion
@@ -22,7 +31,28 @@ android {
         versionCode flutter.versionCode
         versionName flutter.versionName
     }
+
+    signingConfigs {
+        release {
+            if (signingPropertiesFile.exists()) {
+                keyAlias signingProperties["keyAlias"]
+                keyPassword signingProperties["keyPassword"]
+                storeFile file(signingProperties["storeFile"])
+                storePassword signingProperties["storePassword"]
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            if (!signingPropertiesFile.exists()) {
+                throw new GradleException("Android release signing is not configured. Add android/key.properties and upload-keystore.jks.")
+            }
+            signingConfig signingConfigs.release
+        }
+    }
 }
+
 flutter {
     source "../.."
 }
