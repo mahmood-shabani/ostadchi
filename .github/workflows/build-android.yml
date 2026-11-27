@@ -57,6 +57,9 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Install image conversion dependency
+        run: python -m pip install --upgrade Pillow
+
       - name: Convert selected icon to PNG
         run: |
           python - <<'PY'
