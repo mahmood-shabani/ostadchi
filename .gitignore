@@ -11,3 +11,7 @@ build/
 .DS_Store
 android/local.properties
 .env
+
+# Permanent Android signing files - never commit these
+/android/key.properties
+/android/ostadchi-upload-key.jks
