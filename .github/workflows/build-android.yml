@@ -64,6 +64,16 @@ jobs:
           storeFile=../ostadchi-upload-key.jks
           EOF
 
+      - name: Verify decoded keystore and store password
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          test -s android/ostadchi-upload-key.jks || { echo "::error::Decoded keystore is empty. Check ANDROID_KEYSTORE_BASE64."; exit 1; }
+          keytool -list -keystore android/ostadchi-upload-key.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
+          echo "Keystore decoded successfully; store password and alias are valid."
+
       - name: Get dependencies
         run: flutter pub get
 
