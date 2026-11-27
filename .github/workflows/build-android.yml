@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build-apk:
-    name: Build and publish APK
+    name: Build and publish signed APK
     runs-on: ubuntu-latest
     steps:
       - name: Check out Ostadchi source
@@ -32,27 +32,37 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Validate Supabase configuration
+      - name: Validate app and signing secrets
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -z "$SUPABASE_URL" ]; then
-            echo "::error::GitHub Actions secret SUPABASE_URL is missing."
-            exit 1
-          fi
-          if [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
-            echo "::error::GitHub Actions secret SUPABASE_PUBLISHABLE_KEY is missing."
-            exit 1
-          fi
-          case "$SUPABASE_URL" in
-            https://*) ;;
-            *) echo "::error::SUPABASE_URL must start with https://"; exit 1 ;;
-          esac
-          case "$SUPABASE_PUBLISHABLE_KEY" in
-            sb_publishable_*) ;;
-            *) echo "::error::SUPABASE_PUBLISHABLE_KEY must be a Supabase publishable key."; exit 1 ;;
-          esac
+          set -e
+          for name in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then echo "::error::$name secret is missing."; exit 1; fi
+          done
+          case "$SUPABASE_URL" in https://*) ;; *) echo "::error::SUPABASE_URL must start with https://"; exit 1;; esac
+          case "$SUPABASE_PUBLISHABLE_KEY" in sb_publishable_*) ;; *) echo "::error::Invalid Supabase publishable key."; exit 1;; esac
+
+      - name: Configure permanent Android signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          mkdir -p android
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/ostadchi-upload-key.jks
+          cat > android/key.properties <<EOF
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=../ostadchi-upload-key.jks
+          EOF
 
       - name: Get dependencies
         run: flutter pub get
@@ -78,29 +88,29 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Build debug APK
+      - name: Build signed release APK
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
-          flutter build apk --debug \
+          flutter build apk --release \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
 
-      - name: Upload APK as workflow artifact
+      - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: ostadchi-android-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: ostadchi-android-signed-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
 
-      - name: Publish APK in GitHub Releases
+      - name: Publish signed APK in GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ostadchi-v0.5.3-build-${{ github.run_number }}
-          name: Ostadchi Android v0.5.3 (Build ${{ github.run_number }})
+          tag_name: ostadchi-v0.5.4-build-${{ github.run_number }}
+          name: Ostadchi Android v0.5.4 (Build ${{ github.run_number }})
           generate_release_notes: true
-          files: build/app/outputs/flutter-apk/app-debug.apk
+          files: build/app/outputs/flutter-apk/app-release.apk
           fail_on_unmatched_files: true
           make_latest: true
