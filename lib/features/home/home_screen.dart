@@ -216,12 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     label: const Text('ثبت درخواست جدید'),
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'نسخه توسعه‌ای استادچی — اطلاعات نمونه تا زمان اتصال پایگاه داده',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 11, color: Colors.black54),
-                ),
+
               ],
             ),
           ),
