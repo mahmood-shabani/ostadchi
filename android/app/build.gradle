@@ -1,16 +1,13 @@
-import java.util.Properties
-
 plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
 
-def signingProperties = new Properties()
-def signingPropertiesFile = rootProject.file("key.properties")
-if (signingPropertiesFile.exists()) {
-    signingPropertiesFile.withInputStream { signingProperties.load(it) }
-}
+def signingStorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+def signingKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+def signingKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+def signingKeystore = file("../ostadchi-upload-key.jks")
 
 android {
     namespace "com.example.ostadchi"
@@ -34,19 +31,19 @@ android {
 
     signingConfigs {
         release {
-            if (signingPropertiesFile.exists()) {
-                keyAlias signingProperties["keyAlias"]
-                keyPassword signingProperties["keyPassword"]
-                storeFile file(signingProperties["storeFile"])
-                storePassword signingProperties["storePassword"]
+            if (signingStorePassword && signingKeyPassword && signingKeyAlias && signingKeystore.exists()) {
+                storeFile signingKeystore
+                storePassword signingStorePassword
+                keyAlias signingKeyAlias
+                keyPassword signingKeyPassword
             }
         }
     }
 
     buildTypes {
         release {
-            if (!signingPropertiesFile.exists()) {
-                throw new GradleException("Android release signing is not configured. Add android/key.properties and upload-keystore.jks.")
+            if (!(signingStorePassword && signingKeyPassword && signingKeyAlias && signingKeystore.exists())) {
+                throw new GradleException("Android release signing environment is incomplete or keystore file is missing.")
             }
             signingConfig signingConfigs.release
         }
