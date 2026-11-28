@@ -39,10 +39,9 @@ jobs:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -e
-          for name in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+          for name in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS; do
             if [ -z "${!name}" ]; then echo "::error::$name secret is missing."; exit 1; fi
           done
           case "$SUPABASE_URL" in https://*) ;; *) echo "::error::SUPABASE_URL must start with https://"; exit 1;; esac
@@ -65,7 +64,7 @@ jobs:
         run: |
           set -euo pipefail
           keytool -list -keystore android/ostadchi-upload-key.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
-          keytool -certreq -alias "$ANDROID_KEY_ALIAS" -keystore android/ostadchi-upload-key.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -keypass "$ANDROID_KEY_PASSWORD" -file "$RUNNER_TEMP/ostadchi-signing-check.csr" >/dev/null
+          keytool -certreq -alias "$ANDROID_KEY_ALIAS" -keystore android/ostadchi-upload-key.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -keypass "$ANDROID_KEYSTORE_PASSWORD" -file "$RUNNER_TEMP/ostadchi-signing-check.csr" >/dev/null
           echo "Keystore, alias, store password, and private-key password verified."
 
       - name: Get dependencies
@@ -116,7 +115,7 @@ jobs:
             --ks android/ostadchi-upload-key.jks \
             --ks-key-alias "$ANDROID_KEY_ALIAS" \
             --ks-pass env:ANDROID_KEYSTORE_PASSWORD \
-            --key-pass env:ANDROID_KEY_PASSWORD \
+            --key-pass env:ANDROID_KEYSTORE_PASSWORD \
             --out "$SIGNED_APK" "$APK"
           "$APKSIGNER" verify --verbose "$SIGNED_APK"
           test -s "$SIGNED_APK"
